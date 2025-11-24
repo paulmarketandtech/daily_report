@@ -33,10 +33,6 @@ jobs:
       - name: Install project dependencies
         run: uv sync --no-cache
 
-      # Install dev tools that are not in the lockfile
-      - name: Install linting/testing tools
-        run: uv pip install --no-cache ruff black pytest mypy
-
       # ──────────────────────────────────────────────────────
       # 3. Lint & test
       # ──────────────────────────────────────────────────────
