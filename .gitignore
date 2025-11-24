@@ -1,0 +1,43 @@
+# uv / Python
+uv.lock
+.python-version
+__pychache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.pyc
+
+# Virtual environments (uv creates .venv by default)
+.venv/
+venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data & secrets
+data/
+downloads/
+tweets/
+sec_filings/
+*.sqlite
+*.db
+*.json
+*.jsonl
+*.csv
+*.log
+.env
+.env.local
+secrets/
+
+# Docker
+.docker/
+
+# OS garbage
+.DS_Store
+Thumbs.db
