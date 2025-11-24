@@ -31,7 +31,7 @@ jobs:
       # 2. Sync dependencies from uv.lock (super fast + cached)
       # ──────────────────────────────────────────────────────
       - name: Install project dependencies
-        run: uv sync --frozen --no-cache
+        run: uv sync --no-cache
 
       # Install dev tools that are not in the lockfile
       - name: Install linting/testing tools
