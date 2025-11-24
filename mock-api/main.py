@@ -1,3 +1,4 @@
+"""
 from fastapi import FastAPI, APIRouter, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
@@ -64,3 +65,5 @@ def get_tweet(tweet_id: str):
 @api.get("/tweets", response_model=List[Tweet])
 def get_all_tweets():
     return sorted(mock_tweets, key=lambda x: x["created_at"], reverse=True)
+
+"""
