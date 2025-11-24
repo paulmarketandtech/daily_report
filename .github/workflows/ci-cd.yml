@@ -38,11 +38,11 @@ jobs:
       # ──────────────────────────────────────────────────────
       - name: Lint with ruff & black
         run: |
-          ruff check .
-          black --check --diff .
+          uv run ruff check .
+          uv run black --check --diff .
 
       - name: Test with pytest
-        run: pytest || echo "No tests yet – workflow continues"
+        run: uv run pytest || echo "No tests yet – workflow continues"
 
       # ──────────────────────────────────────────────────────
       # 4. Build and push Docker image using uv
