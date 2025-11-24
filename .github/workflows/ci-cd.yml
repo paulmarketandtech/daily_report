@@ -65,4 +65,4 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/daily-report:latest
-            ghcr.io/${{ github.repository }}/daily-report:sha-${{ github.sha::8 }}
+            ghcr.io/${{ github.repository }}/daily-report:sha-${{ github.sha.short }}
