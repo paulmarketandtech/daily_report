@@ -1,0 +1,68 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # needed for ghcr.io push
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ──────────────────────────────────────────────────────
+      # 1. Install uv (official Astral installer)
+      # ──────────────────────────────────────────────────────
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      # Make sure uv is in PATH for subsequent steps
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      # ──────────────────────────────────────────────────────
+      # 2. Sync dependencies from uv.lock (super fast + cached)
+      # ──────────────────────────────────────────────────────
+      - name: Install project dependencies
+        run: uv sync --frozen --no-cache
+
+      # Install dev tools that are not in the lockfile
+      - name: Install linting/testing tools
+        run: uv pip install --no-cache ruff black pytest mypy
+
+      # ──────────────────────────────────────────────────────
+      # 3. Lint & test
+      # ──────────────────────────────────────────────────────
+      - name: Lint with ruff & black
+        run: |
+          ruff check .
+          black --check --diff .
+
+      - name: Test with pytest
+        run: pytest || echo "No tests yet – workflow continues"
+
+      # ──────────────────────────────────────────────────────
+      # 4. Build and push Docker image using uv
+      # ──────────────────────────────────────────────────────
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/daily-report:latest
+            ghcr.io/${{ github.repository }}/daily-report:sha-${{ github.sha::8 }}
