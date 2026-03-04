@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: dailyreport-db
+    environment:
+      POSTGRES_DB: dailyreport
+      POSTGRES_USER: dailyreport
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    container_name: dailyreport-llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 10G
+          cpus: '4'
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: dailyreport-queue
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  ollama_data:

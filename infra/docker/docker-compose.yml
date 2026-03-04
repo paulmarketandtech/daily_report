@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: dailyreport-db
+    environment:
+      POSTGRES_DB: dailyreport
+      POSTGRES_USER: dailyreport
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: unless-stopped
+
+volumes:
+  pgdata:

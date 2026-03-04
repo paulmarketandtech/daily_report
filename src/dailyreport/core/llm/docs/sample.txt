@@ -1,0 +1,16 @@
+Python Best Practices Guide
+
+Chapter 1: Code Style
+Always use meaningful variable names. Avoid single letters except for loop counters.
+Use snake_case for functions and variables. Use PascalCase for classes.
+Keep functions small and focused on one task.
+
+Chapter 2: Error Handling
+Always handle exceptions explicitly. Never use bare except clauses.
+Use context managers (with statements) for file operations.
+Log errors with meaningful messages.
+
+Chapter 3: Documentation
+Write docstrings for all public functions.
+Keep comments up to date with code changes.
+Use type hints for better code clarity.

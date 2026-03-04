@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.pyc
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.env
+!.env.example
+.venv
+.venv/
+.env/
+
+
+# PostgreSQL data
+pgdata/
+
+
+# IDE
+.vscode/
+.idea/
+
+# Others
+.txt
