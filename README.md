@@ -24,8 +24,8 @@ Intelligence
 
 ---
 
-```
 ## 🏗️ Architecture
+```
 ┌──────────────────────────────────────────────────────────┐
 │                     PROXMOX HOST                         │
 │                                                          │
@@ -80,8 +80,8 @@ Manual Notes ──┘    & Queue      & Python Math      ├─ derived_metrics
 
 
 
-```
 ## 🛠️ Tech Stack
+```
 |------------------------------------------------------------------------------------------------------------------------------|
 | Layer          | Technology                            | Why                                                                 |
 |------------------------------------------------------------------------------------------------------------------------------|
@@ -105,10 +105,6 @@ Single GPU → Sequential processing, not parallel. Queue-based architecture mak
 No cloud budget → Everything local. The upside: no API costs even when processing millions of pages. The system pays for itself in the first month versus commercial API pricing.
 
 These are engineering constraints that led to a cleaner, more thoughtful design than "just throw it at GPT"
-
-
-## 📁 Project Structure
-
 
 
 ## 📊 Database Schema
