@@ -24,30 +24,47 @@ Intelligence
 
 ---
 
+```
 ## 🏗️ Architecture
+┌──────────────────────────────────────────────────────────┐
+│                     PROXMOX HOST                         │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │              DEBIAN VM (GPU Passthrough)           │  │
+│  │                                                    │  │
+│  │  ┌──────────┐ ┌──────────┐ ┌─────────┐ ┌────────┐  │  │
+│  │  │  Ollama  │ │ Postgres │ │  Redis  │ │Workers │  │  │
+│  │  │  (LLM)   │ │+pgvector │ │ (Queue) │ │(Python)│  │  │
+│  │  │  ┌────┐  │ │          │ │         │ │        │  │  │
+│  │  │  │GPU │  │ │          │ │         │ │        │  │  │
+│  │  │  └────┘  │ │          │ │         │ │        │  │  │
+│  │  └──────────┘ └──────────┘ └─────────┘ └────────┘  │  │
+│  │         Docker Network (internal)                  │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
 
+Everything runs in Docker containers on a single VM. The LLM server exposes an internal API. Workers process document queues. PostgreSQL with pgvector handles both structured queries and semantic search. No cloud dependencies.
+
+### Data Pipeline
 ```
-┌──────────────┐   ┌──────────────┐   ┌────────────┐
-│ Ingestion    │   │ Processing   │   │   API      │  
-│ Workers      │──▶│ Pipeline     │──▶│ + Query    │
-│              │   │ (LLM/RAG)    │   │   Engine   │
-└──────┬───────┘   └──────┬───────┘   └──────┬─────┘
-       │                  │                  │
-       ▼                  ▼                  ▼
-┌───────────────────────────────────────────────────────┐
-│               PostgreSQL + pgvector                   │
-│  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐ │
-│  │Raw Facts│ │Sentiments│ │Summaries │ │ Embeddings │ │
-│  │(immut.) │ │+ Narratv.│ │+ Context │ │ (HNSW idx) │ │
-│  └─────────┘ └──────────┘ └──────────┘ └────────────┘ │
-└───────────────────────────────────────────────────────┘
-                           │
-                    ┌──────┴──────┐
-                    │    Redis    │
-                    │  (queues +  │
-                    │  caching)   │
-                    └─────────────┘
+10-Ks (.md) ───┐
+Earnings (PDF)─┤──→ Document ──→ Section-Aware ──→ PostgreSQL
+News (yfinance)┤    Registry     LLM Processing     ├─ raw_facts
+Manual Notes ──┘    & Queue      & Python Math      ├─ derived_metrics
+                                                  ├─ summaries+embeddings
+                                                    ├─ sentiment
+                                                    ├─ risk_factors
+                                                  ├─ company_relationships
+                                                    └─ processing_logs
+                                                          │
+                                    ┌─────────────────────┤
+                                    ▼                     ▼
+                              Morning Paper        Interactive Query
+                              (scheduled)          (on-demand briefing)
 ```
+
+
 
 ### Core Design Principles 
 
@@ -62,60 +79,35 @@ Intelligence
 ```
 
 
+
 ```
 ## 🛠️ Tech Stack
-
-|  Layer              | Technology                         |
-|---------------------|------------------------------------|
-| **Language**        | Python 3.11+                       |
-| **Database**        | PostgreSQL 16 + pgvector           |
-| **Cache / Queue**   | Redis 7                            |
-| **ORM**             | SQLAlchemy 2.0 (async)             |
-| **Migrations**      | Alembic                            |
-| **LLM**             | Ollama (local)                     |
-| **Embeddings**      | all-MiniLM-L6-v2 (384-dim)         |
-| **API**             | FastAPI                            |
-| **Validation**      | Pydantic v2                        |
-| **Infrastructure**  | Docker Compose, Terraform, Ansible |
-| **CI/CD**           | GitHub Actions                     |
-| **Package Manager** | uv                                 |
+|------------------------------------------------------------------------------------------------------------------------------|
+| Layer          | Technology                            | Why                                                                 |
+|------------------------------------------------------------------------------------------------------------------------------|
+| Infrastructure | Proxmox → Debian VM → Docker          | Single-machine, full GPU control, container isolation without VM overhead |
+| LLM Serving    | Ollama + Qwen2.5 7B (Q4_K_M)          | Fits in 6GB VRAM, strong at structured extraction                   |
+| Database       | PostgreSQL 16 + pgvector              | Structured data + vector search in one engine                       |
+| Queue          | Redis                                 | Lightweight, reliable task distribution                             |
+| Processing     | Python workers                        | Document parsing, LLM orchestration, metric computation             |
+| GPU            | NVIDIA RTX 3060 (6GB)                 | Consumer hardware running production workloads                      |
 ```
+
+### The Constraint-Driven Design
+This project runs on a gaming laptop. That constraint shaped every architectural decision:
+
+6GB VRAM → Model must be 7B parameters at 4-bit quantization. Context window limited to ~2-4K tokens. Every document chunk is carefully sized. KV cache management matters.
+
+32GB system RAM → Single VM instead of multiple. Docker containers share the kernel. Every GB is budgeted across services.
+
+Single GPU → Sequential processing, not parallel. Queue-based architecture makes this a feature: perfect resumability, complete processing logs, no race conditions.
+
+No cloud budget → Everything local. The upside: no API costs even when processing millions of pages. The system pays for itself in the first month versus commercial API pricing.
+
+These are engineering constraints that led to a cleaner, more thoughtful design than "just throw it at GPT"
 
 
 ## 📁 Project Structure
-
-```
-daily_report/
-├── alembic/                    # Database migrations
-│   ├── env.py
-│   └── versions/
-├── infrastructure/
-│   └── docker/
-│       └── postgres/           # Custom PG image with pgvector
-├── scripts/
-│   ├── seed.py                 # Initial data seeding
-│   ├── healthcheck.py          # DB verification
-│   └── test_db.py
-├── src/
-│   └── dailyreport/
-│       └── core/
-│           ├── config.py       # Pydantic settings
-│           └── db/
-│               ├── base.py     # SQLAlchemy Base
-│               ├── session.py  # Engine & session factory
-│               └── models/
-│                   ├── company.py      # Sector, Company, Relationships
-│                   ├── document.py     # Document, DocumentSection
-│                   ├── knowledge.py    # RawFact, DerivedMetric, Summary,
-│                   │                   # Sentiment, RiskFactor, Mention
-│                   ├── thesis.py       # Investment theses
-│                   ├── meta.py         # ProcessingLog (observability)
-│                   └── enums.py        # Python-side validation enums
-├── tests/
-├── docker-compose.yml
-├── Makefile
-└── pyproject.toml
-```
 
 
 
